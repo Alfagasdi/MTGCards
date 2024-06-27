@@ -16,19 +16,39 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(modifier: Modifier = Modifier) {
+fun HomeScreen(
+    viewModel: HomeScreenViewModel = koinViewModel(),
+    advancedSearch: () -> Unit,
+    normalSearch: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val state = viewModel.viewState.observeAsState()
+    state.value?.let {
+        when (it) {
+            is HomeViewState.AdvancedSearch -> {
+                viewModel.clearState()
+                advancedSearch()
+            }
+            is HomeViewState.NormalSearch -> {
+                viewModel.clearState()
+                normalSearch(it.cardName)
+            }
+        }
+    }
+
     var search by remember { mutableStateOf("") }
     Scaffold(
         topBar = { HomeToolBar(scrollBehavior = scrollBehavior) },
@@ -45,15 +65,18 @@ fun HomeScreen(modifier: Modifier = Modifier) {
             TextField(
                 value = search,
                 onValueChange = { search = it },
-                label = { Text(text = "Nome da carta")},
+                label = { Text(text = "Nome da carta") },
                 modifier = modifier
                     .fillMaxWidth()
                     .padding(16.dp)
             )
-            Button(onClick = { /*TODO*/ }, modifier = modifier.padding(top = 16.dp, bottom = 8.dp)) {
+            Button(
+                onClick = { viewModel.onNormalSearch(search)},
+                modifier = modifier.padding(top = 16.dp, bottom = 8.dp)
+            ) {
                 Text(text = "Procurar")
             }
-            TextButton(onClick = { /*TODO*/ }) {
+            TextButton(onClick = { viewModel.onAdvancedSearch() }) {
                 Text(text = "Busca Avançada")
             }
         }
@@ -68,11 +91,4 @@ fun HomeToolBar(scrollBehavior: TopAppBarScrollBehavior, modifier: Modifier = Mo
         modifier = modifier,
         scrollBehavior = scrollBehavior
     )
-}
-
-
-@Preview
-@Composable
-fun HomePreview() {
-    HomeScreen()
 }
